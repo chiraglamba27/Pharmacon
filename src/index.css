@@ -1,0 +1,194 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --canvas: #FFF8E8;
+    --canvas-dark: #351027;
+    --brand-pink: #FF6F89;
+    --brand-red: #F52F4F;
+    --brand-crimson: #8F1230;
+    --brand-burgundy: #730F34;
+    --brand-dark: #351027;
+  }
+
+  html, body {
+    background-color: #FFF8E8;
+    color: #351027;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    letter-spacing: -0.015em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: #F52F4F;
+    color: #FFF8E8;
+  }
+}
+
+@layer components {
+  /* ─── Tactile Pill Buttons ────────────────────────────────────────────── */
+  .btn-tactile {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background-color: #351027;
+    padding-bottom: 4px;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.15s cubic-bezier(0.19, 1, 0.22, 1);
+    text-decoration: none;
+  }
+
+  .btn-tactile:active {
+    transform: translateY(3px);
+    padding-bottom: 1px;
+  }
+
+  .btn-tactile-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    height: 100%;
+    border: 2px solid #351027;
+    border-radius: 9999px;
+    padding: 0.65rem 1.6rem;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    transition: transform 0.25s cubic-bezier(0.19, 1, 0.22, 1);
+  }
+
+  .btn-tactile:hover .btn-tactile-inner {
+    transform: translateY(-2px);
+  }
+
+  /* Button Variants */
+  .btn-tactile-white .btn-tactile-inner {
+    background-color: #FFFFFF;
+    color: #351027;
+  }
+
+  .btn-tactile-dark .btn-tactile-inner {
+    background-color: #8F1230;
+    color: #FFF8E8;
+  }
+
+  .btn-tactile-gold .btn-tactile-inner {
+    background-color: #FECB66;
+    color: #351027;
+  }
+
+  .btn-tactile-pink .btn-tactile-inner {
+    background-color: #F52F4F;
+    color: #FFFFFF;
+  }
+
+  /* ─── Chunky Display Headings ─────────────────────────────────────────── */
+  .heading-chunky {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    color: #351027;
+  }
+
+  /* ─── Tag Pills ───────────────────────────────────────────────────────── */
+  .pill-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1.5px solid #351027;
+    border-radius: 9999px;
+    background-color: #FFF8E8;
+    color: #351027;
+    padding: 0.4rem 1.2rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    box-shadow: 0 2px 0 0 #351027;
+  }
+
+  .pill-tag-dark {
+    background-color: #8F1230;
+    color: #FFF8E8;
+    border-color: #351027;
+  }
+
+  .pill-tag-gold {
+    background-color: #FECB66;
+    color: #351027;
+  }
+
+  .pill-tag-pink {
+    background-color: #FF6F89;
+    color: #FFFFFF;
+  }
+
+  /* ─── Tactile Cards ───────────────────────────────────────────────────── */
+  .card-tactile {
+    background-color: #FFFFFF;
+    border: 2.5px solid #351027;
+    border-radius: 2rem;
+    box-shadow: 0 6px 0 0 #351027;
+    transition: transform 0.25s cubic-bezier(0.19, 1, 0.22, 1), box-shadow 0.25s ease;
+  }
+
+  .card-tactile-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 0 0 #351027;
+  }
+
+  /* ─── Phone Frames ────────────────────────────────────────────────────── */
+  .phone-container {
+    position: relative;
+    border: 3.5px solid #351027;
+    border-radius: 3rem;
+    padding: 0.75rem;
+    box-shadow: 0 12px 0 0 #351027;
+    background: linear-gradient(180deg, #FFA3B5 0%, #F52F4F 100%);
+    transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+  }
+
+  .phone-screen-inner {
+    background-color: #FFF8E8;
+    border: 2px solid #351027;
+    border-radius: 2.35rem;
+    padding: 1.2rem;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FFF8E8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #FECB66;
+  border: 2px solid #351027;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #F52F4F;
+}
