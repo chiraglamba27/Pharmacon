@@ -74,4 +74,4 @@ The application does not fall back to local/demo persistence when Supabase is un
 | Aryan Sharma | Frontend Lead & UI/UX |
 | Aniket Raj | Backend & Storage Lead |
 | Amitesh Kumar Singh | AI / CV Engineer |
-| Chirag Lamba | Integration & QA Lead |
+| Chirag Lamba | Frontend Assistance + Backend Integration|
