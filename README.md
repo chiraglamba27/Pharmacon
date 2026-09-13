@@ -17,11 +17,6 @@ There is no Express server, SQLite database, local upload directory, custom JWT 
 
 Create `.env` from `.env.example`:
 
-```bash
-VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_OR_PUBLISHABLE_KEY
-```
-
 Then:
 
 ```bash
