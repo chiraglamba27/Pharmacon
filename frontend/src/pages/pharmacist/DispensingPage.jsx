@@ -64,7 +64,7 @@ export default function DispensingPage() {
     if (!selectedMedId || dispenseQty < 1) return;
     const med = medicines.find(m => m.id === selectedMedId);
     if (!med) return;
-    setDispenseItems([...dispenseItems, { medicine_id: med.id, name: med.name, dispense_qty: parseInt(dispenseQty, 10) }]);
+    setDispenseItems([...dispenseItems, { medicine_id: med.id, name: med.generic_name || med.name, dispense_qty: parseInt(dispenseQty, 10) }]);
     setSelectedMedId('');
     setDispenseQty(1);
     setShowMedSelect(false);
@@ -172,7 +172,7 @@ export default function DispensingPage() {
                 <select className="form-input" value={selectedMedId} onChange={e => setSelectedMedId(e.target.value)}>
                   <option value="">-- Select Medicine --</option>
                   {medicines.map(m => (
-                    <option key={m.id} value={m.id}>{m.name} ({m.strength})</option>
+                    <option key={m.id} value={m.id}>{m.generic_name || m.name} ({m.strength})</option>
                   ))}
                 </select>
               </div>

@@ -243,8 +243,8 @@ export default function InventoryPage() {
                   return (
                     <tr key={med.id}>
                       <td>
-                        <p className="font-medium text-surface-900">{med.name}</p>
-                        {med.generic_name && <p className="text-xs text-surface-400">{med.generic_name}</p>}
+                        <p className="font-medium text-surface-900">{med.generic_name || med.name}</p>
+                        {med.generic_name && <p className="text-xs text-surface-400">{med.name}</p>}
                       </td>
                       <td>{med.dosage_form} · {med.strength}</td>
                       <td className="font-mono text-xs">{med.sku || '—'}</td>
