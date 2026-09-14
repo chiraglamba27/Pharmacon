@@ -25,6 +25,17 @@ export async function listDeliverables(req, res, next) {
   } catch (err) { next(err); }
 }
 
+export async function listAllDeliverables(req, res, next) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('deliverables')
+      .select('*, file_assets(id, original_name, mime_type, size, storage_path, bucket)')
+      .order('date', { ascending: false });
+    if (error) throw new AppError(error.message, 500);
+    res.json({ data });
+  } catch (err) { next(err); }
+}
+
 export async function getDeliverable(req, res, next) {
   try {
     const { id } = req.params;

@@ -20,7 +20,7 @@ export default function AdminDeliverables() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-deliverables'],
-    queryFn: () => apiRequest('/api/deliverables', {}, session), // Note: Currently this endpoint only returns published. Admin should probably see drafts, but for now we follow the existing controller.
+    queryFn: () => apiRequest('/api/deliverables/admin', {}, session),
   });
 
   const publishMutation = useMutation({

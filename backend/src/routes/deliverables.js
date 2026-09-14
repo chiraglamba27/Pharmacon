@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import {
-  listDeliverables, getDeliverable,
+  listDeliverables, listAllDeliverables, getDeliverable,
   createDeliverable, updateDeliverable,
   publishDeliverable, deleteDeliverable,
 } from '../controllers/deliverables.controller.js';
 
 const router = Router();
 router.get('/', listDeliverables);
+router.get('/admin', requireAuth, requireRole('admin'), listAllDeliverables);
 router.get('/:id', getDeliverable);
 router.post('/', requireAuth, requireRole('admin'), createDeliverable);
 router.put('/:id', requireAuth, requireRole('admin'), updateDeliverable);
