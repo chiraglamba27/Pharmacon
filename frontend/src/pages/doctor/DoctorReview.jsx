@@ -45,7 +45,7 @@ export default function DoctorReview() {
   });
 
   const confirmMutation = useMutation({
-    mutationFn: () => apiRequest(`/api/prescriptions/${id}/confirm`, { method: 'PATCH' }, session),
+    mutationFn: () => apiRequest(`/api/prescriptions/${id}/confirm`, { method: 'POST' }, session),
     onSuccess: () => {
       qc.invalidateQueries(['prescription', id]);
       show('Prescription confirmed', 'success');
@@ -55,7 +55,7 @@ export default function DoctorReview() {
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (reason) => apiRequest(`/api/prescriptions/${id}/reject`, { method: 'PATCH', body: JSON.stringify({ reason }) }, session),
+    mutationFn: (reason) => apiRequest(`/api/prescriptions/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }, session),
     onSuccess: () => {
       qc.invalidateQueries(['prescription', id]);
       setShowRejectModal(false);

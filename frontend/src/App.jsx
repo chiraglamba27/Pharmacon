@@ -100,6 +100,7 @@ export default function App() {
         <Route index element={<DoctorDashboard />} />
         <Route path="prescriptions" element={<DoctorPrescriptions />} />
         <Route path="prescriptions/:id" element={<DoctorReview />} />
+        <Route path="prescriptions/:id/view" element={<PrescriptionDetailPage />} />
         <Route path="calibration" element={<DoctorCalibration />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
