@@ -89,7 +89,7 @@ export async function uploadPrescription(req, res, next) {
 export async function listPrescriptions(req, res, next) {
   try {
     const { role, id: userId } = req.user;
-    let query = supabaseAdmin.from('prescriptions').select('*, file_assets(id, original_name, mime_type), prescription_items(*)');
+    let query = supabaseAdmin.from('prescriptions').select('*, file_assets(id, original_name, mime_type), prescription_items(*), prescription_extraction_fields(*), refill_requests(*)');
 
     if (role === 'patient') query = query.eq('patient_id', userId);
     else if (role === 'doctor') query = query.eq('doctor_id', userId);

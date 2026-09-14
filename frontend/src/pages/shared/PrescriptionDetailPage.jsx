@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { apiRequest } from '../../lib/api';
 import { PageSpinner } from '../../components/Spinner';
@@ -138,13 +138,6 @@ export default function PrescriptionDetailPage() {
               ))}
             </div>
           </div>
-          
-          {(role === 'clinic_staff' || role === 'doctor') && pres.status === 'NEEDS_REVIEW' && (
-            <button onClick={() => navigate(`/${role}/prescriptions/${id}`)} className="btn-primary w-full mt-4">
-              Open Review Mode
-            </button>
-          )}
-
           {role === 'clinic_staff' && (
             <div className="mt-4 p-4 border border-surface-200 rounded-lg bg-surface-50">
               <h4 className="font-semibold text-surface-900 text-sm mb-3">Assignment</h4>

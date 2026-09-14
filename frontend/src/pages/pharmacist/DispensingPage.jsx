@@ -131,6 +131,15 @@ export default function DispensingPage() {
       </div>
 
       <Modal open={!!selectedPres} onClose={() => setSelectedPres(null)} title={`Dispense Prescription - ${selectedPres?.id.split('-')[0]}`} maxWidth="max-w-2xl">
+        {selectedPres?.refill_requests?.length > 0 && (
+          <div className="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+            <h3 className="font-semibold text-amber-900 mb-2">Patient Refill Request</h3>
+            <p className="text-sm text-amber-800">
+              <span className="font-medium">Notes: </span>
+              {selectedPres.refill_requests.sort((a,b) => new Date(b.created_at) - new Date(a.created_at))[0].notes || 'No additional notes provided.'}
+            </p>
+          </div>
+        )}
         <div className="mb-6 p-4 bg-brand-50 rounded-lg border border-brand-200">
           <h3 className="font-semibold text-brand-900 mb-2">Prescription Data</h3>
           <div className="text-sm text-brand-800 space-y-1">
