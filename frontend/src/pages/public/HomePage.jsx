@@ -16,10 +16,10 @@ const FEATURES = [
 ];
 
 const TEAM = [
-  { name: 'Aryan Sharma', role: 'Frontend / UI/UX' },
-  { name: 'Aniket Raj', role: 'Backend / Storage' },
-  { name: 'Amitesh Kumar Singh', role: 'AI / Computer Vision' },
-  { name: 'Chirag Lamba', role: 'Integration / QA' },
+  { name: 'Aryan Sharma', role: 'AI Pipeline Lead' },
+  { name: 'Amitesh Kr. Singh', role: 'Deployment, Model Training' },
+  { name: 'Aniket Raj', role: 'Frontend Lead' },
+  { name: 'Chirag Lamba', role: 'Frontend Assistance + Backend' },
 ];
 
 export default function HomePage() {
