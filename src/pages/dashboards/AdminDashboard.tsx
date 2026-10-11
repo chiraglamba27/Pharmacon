@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import FileUploader from '../../components/FileUploader';
 import {
   Users, Activity, Package, Settings, Shield, AlertTriangle, Loader2,
-  FileText, Download, Trash2, Eye, Plus, X, Upload, File, Image, FolderOpen
+  FileText, Download, Trash2, Eye, Plus, X, Upload, File, Image, FolderOpen, Database
 } from 'lucide-react';
 
 interface UploadedFile {
@@ -131,12 +131,25 @@ export default function AdminDashboard() {
 
   return (
     <div className="page-container">
-      <h1 className="page-title">Admin Portal</h1>
-      <p className="page-subtitle">
-        {isAdmin
-          ? 'Upload files, manage deliverables, and control versioning.'
-          : 'View uploaded files and deliverables. Admin access required for editing.'}
-      </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="page-title">Admin Portal</h1>
+          <p className="page-subtitle">
+            {isAdmin
+              ? 'Upload files, manage deliverables, and control versioning.'
+              : 'View uploaded files and deliverables. Admin access required for editing.'}
+          </p>
+        </div>
+        {isAdmin && (
+          <Link
+            to="/db"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-sm self-start sm:self-auto border border-slate-700"
+          >
+            <Database className="w-4 h-4 text-emerald-400" />
+            <span>SQLite Database Inspector</span>
+          </Link>
+        )}
+      </div>
 
       <div className="max-w-5xl space-y-8">
         {/* Stats */}

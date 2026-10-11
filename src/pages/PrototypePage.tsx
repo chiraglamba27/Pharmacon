@@ -1,11 +1,13 @@
 import React, { useState, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Upload, Sparkles, CheckCircle2, AlertTriangle, ChevronRight,
   Package, Eye, FileText, Camera, ShieldCheck, RefreshCw,
-  Building2, ArrowRight, Check, Image as ImageIcon, X
+  Building2, ArrowRight, Check, Image as ImageIcon, X, Stethoscope
 } from 'lucide-react';
 import MedicinePillMascot from '../components/MedicinePillMascot';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 interface FieldItem {
   label: string;
@@ -33,6 +35,10 @@ export default function PrototypePage() {
   const [activeDoctor, setActiveDoctor] = useState('Dr. A. Sharma (Calibrated Model v2.4)');
   const [isProcessing, setIsProcessing] = useState(false);
   const [notification, setNotification] = useState('');
+  const [createdRxId, setCreatedRxId] = useState<string>('');
+
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -68,7 +74,6 @@ export default function PrototypePage() {
     setIsProcessing(true);
 
     setTimeout(() => {
-      // If user uploaded a specific file name, we can adapt detected medicine
       if (name.toLowerCase().includes('metformin')) {
         setFields([
           { label: 'Patient Name', value: 'Meera Patel', confidence: 98, needsVerification: false },
@@ -96,14 +101,30 @@ export default function PrototypePage() {
 
   const handleConfirm = async () => {
     setIsProcessing(true);
+    const customId = `RX-DEMO-${Date.now().toString(36).toUpperCase()}`;
+    setCreatedRxId(customId);
     try {
-      await api.post('/prescriptions/confirm-sample');
-    } catch (e) {}
+      const patientName = fields.find(f => f.label.toLowerCase().includes('patient'))?.value || 'Rahul Kumar';
+      const medName = fields.find(f => f.label.toLowerCase().includes('med'))?.value || 'Amoxicillin';
+      await api.post('/prescriptions/upload-demo', {
+        id: customId,
+        patientName,
+        medicine: medName,
+        fields,
+      });
+    } catch (e) {
+      console.error('Failed to submit prescription in DB:', e);
+    }
 
     setStage('confirmed');
     setIsProcessing(false);
-    setNotification('Prescription confirmed, digitally signed and synced with Apollo Pharmacy SKU inventory!');
+    setNotification(`Prescription ${customId} submitted to Doctor Queue for review & signature!`);
     setTimeout(() => setNotification(''), 4500);
+  };
+
+  const handleSwitchToDoctorAndReview = async () => {
+    await login('priya.sharma@example.com', 'doctor123');
+    navigate('/dashboard/doctor');
   };
 
   const handleReset = () => {
@@ -409,7 +430,7 @@ export default function PrototypePage() {
                 >
                   <span className="btn-tactile-inner py-2 px-6 text-xs font-extrabold flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    Confirm & Digitally Sign
+                    Submit to Doctor for Approval (Step 1)
                   </span>
                 </button>
               </div>
@@ -421,48 +442,68 @@ export default function PrototypePage() {
       {/* ─── STAGE 4: Confirmed & Synced Dashboard Payoff ─────────────────── */}
       {stage === 'confirmed' && (
         <div className="card-tactile p-8 bg-[#E0F5EE] border-2 border-[#351027] space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#059669] text-white flex items-center justify-center shadow-tactile-sm">
-              <CheckCircle2 className="w-7 h-7" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-[#059669] text-white flex items-center justify-center shadow-tactile-sm">
+                <CheckCircle2 className="w-7 h-7" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-extrabold uppercase tracking-wider bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full border border-emerald-300">
+                    Step 1 of 4 Complete
+                  </span>
+                  <span className="text-xs font-mono font-bold text-emerald-800">{createdRxId}</span>
+                </div>
+                <h2 className="heading-chunky text-2xl text-emerald-950 mt-1">
+                  Prescription Scanned & Queued in SQLite!
+                </h2>
+                <p className="text-xs sm:text-sm text-emerald-900/80 font-medium">
+                  Status is saved as <strong>PENDING REVIEW</strong>. It is now waiting for Doctor clinical verification and digital signing.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="heading-chunky text-2xl text-emerald-950">
-                Prescription Verified & Digitally Dispatched!
-              </h2>
-              <p className="text-xs sm:text-sm text-emerald-900/80 font-medium">
-                The handwritten prescription was parsed, doctor-verified, and propagated across all connected subsystems:
-              </p>
-            </div>
+
+            {/* Next Step Action CTA */}
+            <button
+              onClick={handleSwitchToDoctorAndReview}
+              className="btn-tactile btn-tactile-dark self-start sm:self-auto shrink-0 shadow-tactile"
+            >
+              <span className="btn-tactile-inner py-3 px-6 text-xs font-extrabold flex items-center gap-2">
+                <Stethoscope className="w-4 h-4 text-emerald-400" />
+                <span>Go to Step 2: Switch to Doctor & Approve</span>
+                <ArrowRight className="w-4 h-4" />
+              </span>
+            </button>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-4 bg-white rounded-2xl border-2 border-[#351027] shadow-tactile-sm space-y-1">
               <FileText className="w-5 h-5 text-[#F52F4F]" />
-              <div className="font-display font-extrabold text-xs text-[#351027]">Doctor Signed</div>
-              <div className="text-[10px] text-[#351027]/70 font-medium">Digitally archived in SQLite</div>
+              <div className="font-display font-extrabold text-xs text-[#351027]">1. Intake Queued</div>
+              <div className="text-[10px] text-[#351027]/70 font-medium">Waiting for Dr. Priya Sharma</div>
             </div>
 
             <div className="p-4 bg-white rounded-2xl border-2 border-[#351027] shadow-tactile-sm space-y-1">
               <Building2 className="w-5 h-5 text-[#D97706]" />
-              <div className="font-display font-extrabold text-xs text-[#351027]">Pharmacy Queue</div>
-              <div className="text-[10px] text-[#351027]/70 font-medium">SKU #AMX-500 queued for dispatch</div>
+              <div className="font-display font-extrabold text-xs text-[#351027]">2. Doctor Sign</div>
+              <div className="text-[10px] text-[#351027]/70 font-medium">Digital signature verification</div>
             </div>
 
             <div className="p-4 bg-white rounded-2xl border-2 border-[#351027] shadow-tactile-sm space-y-1">
-              <Eye className="w-5 h-5 text-[#059669]" />
-              <div className="font-display font-extrabold text-xs text-[#351027]">Patient App Sync</div>
-              <div className="text-[10px] text-[#351027]/70 font-medium">Daily dosage schedule pushed</div>
+              <Package className="w-5 h-5 text-[#059669]" />
+              <div className="font-display font-extrabold text-xs text-[#351027]">3. Pharmacy Dispense</div>
+              <div className="text-[10px] text-[#351027]/70 font-medium">Auto-decrements SQLite stock</div>
             </div>
 
             <div className="p-4 bg-white rounded-2xl border-2 border-[#351027] shadow-tactile-sm space-y-1">
               <ShieldCheck className="w-5 h-5 text-[#9333EA]" />
-              <div className="font-display font-extrabold text-xs text-[#351027]">Immutable Audit Log</div>
-              <div className="text-[10px] text-[#351027]/70 font-medium">Cryptographic audit entry recorded</div>
+              <div className="font-display font-extrabold text-xs text-[#351027]">4. Patient Care</div>
+              <div className="text-[10px] text-[#351027]/70 font-medium">Daily dosage schedule & refills</div>
             </div>
           </div>
 
-          <div className="flex justify-end pt-2">
-            <button onClick={handleReset} className="btn-tactile btn-tactile-dark">
+          <div className="flex justify-end gap-3 pt-2">
+            <button onClick={handleReset} className="btn-tactile btn-tactile-white">
               <span className="btn-tactile-inner py-2 px-6 text-xs font-extrabold flex items-center gap-2">
                 <Upload className="w-4 h-4" />
                 Upload Another Prescription

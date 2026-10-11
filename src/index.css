@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,50 +6,41 @@
 
 @layer base {
   :root {
-    --canvas: #FFF8E8;
-    --canvas-dark: #351027;
-    --brand-pink: #FF6F89;
-    --brand-red: #F52F4F;
-    --brand-crimson: #8F1230;
-    --brand-burgundy: #730F34;
-    --brand-dark: #351027;
+    --canvas: #F8FAFC;
+    --canvas-dark: #0F172A;
+    --primary: #0284C7;
+    --primary-dark: #0369A1;
+    --teal: #0D9488;
+    --emerald: #059669;
   }
 
   html, body {
-    background-color: #FFF8E8;
-    color: #351027;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    letter-spacing: -0.015em;
+    background-color: #F8FAFC;
+    color: #0F172A;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.012em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
   }
 
   ::selection {
-    background-color: #F52F4F;
-    color: #FFF8E8;
+    background-color: #0284C7;
+    color: #FFFFFF;
   }
 }
 
 @layer components {
-  /* ─── Tactile Pill Buttons ────────────────────────────────────────────── */
+  /* ─── Clean Modern Buttons ────────────────────────────────────────────── */
   .btn-tactile {
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 9999px;
-    background-color: #351027;
-    padding-bottom: 4px;
     cursor: pointer;
     user-select: none;
-    transition: transform 0.15s cubic-bezier(0.19, 1, 0.22, 1);
+    transition: all 0.18s ease;
     text-decoration: none;
-  }
-
-  .btn-tactile:active {
-    transform: translateY(3px);
-    padding-bottom: 1px;
   }
 
   .btn-tactile-inner {
@@ -59,136 +50,245 @@
     gap: 0.5rem;
     width: 100%;
     height: 100%;
-    border: 2px solid #351027;
     border-radius: 9999px;
-    padding: 0.65rem 1.6rem;
-    font-family: 'Bricolage Grotesque', sans-serif;
-    font-size: 0.78rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    transition: transform 0.25s cubic-bezier(0.19, 1, 0.22, 1);
+    padding: 0.55rem 1.4rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    transition: all 0.18s ease;
   }
 
-  .btn-tactile:hover .btn-tactile-inner {
-    transform: translateY(-2px);
+  .btn-tactile:hover {
+    transform: translateY(-1px);
   }
 
-  /* Button Variants */
+  .btn-tactile:active {
+    transform: translateY(1px);
+  }
+
+  /* Modern Variants */
   .btn-tactile-white .btn-tactile-inner {
     background-color: #FFFFFF;
-    color: #351027;
+    color: #0F172A;
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+  .btn-tactile-white:hover .btn-tactile-inner {
+    background-color: #F8FAFC;
+    border-color: #CBD5E1;
   }
 
   .btn-tactile-dark .btn-tactile-inner {
-    background-color: #8F1230;
-    color: #FFF8E8;
+    background-color: #0F172A;
+    color: #FFFFFF;
+    border: 1px solid #0F172A;
+    box-shadow: 0 2px 4px rgba(15,23,42,0.15);
+  }
+  .btn-tactile-dark:hover .btn-tactile-inner {
+    background-color: #1E293B;
   }
 
   .btn-tactile-gold .btn-tactile-inner {
-    background-color: #FECB66;
-    color: #351027;
+    background-color: #0284C7;
+    color: #FFFFFF;
+    border: 1px solid #0284C7;
+    box-shadow: 0 2px 4px rgba(2,132,199,0.25);
+  }
+  .btn-tactile-gold:hover .btn-tactile-inner {
+    background-color: #0369A1;
   }
 
   .btn-tactile-pink .btn-tactile-inner {
-    background-color: #F52F4F;
+    background-color: #0D9488;
     color: #FFFFFF;
+    border: 1px solid #0D9488;
+    box-shadow: 0 2px 4px rgba(13,148,136,0.25);
+  }
+  .btn-tactile-pink:hover .btn-tactile-inner {
+    background-color: #0F766E;
   }
 
-  /* ─── Chunky Display Headings ─────────────────────────────────────────── */
+  /* ─── Clean Typography & Headings ─────────────────────────────────────── */
   .heading-chunky {
-    font-family: 'Bricolage Grotesque', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 800;
     letter-spacing: -0.03em;
-    line-height: 1.02;
-    color: #351027;
+    line-height: 1.15;
+    color: #0F172A;
   }
 
-  /* ─── Tag Pills ───────────────────────────────────────────────────────── */
+  /* ─── Modern Status Pills ─────────────────────────────────────────────── */
   .pill-tag {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    border: 1.5px solid #351027;
+    gap: 0.35rem;
+    border: 1px solid #E2E8F0;
     border-radius: 9999px;
-    background-color: #FFF8E8;
-    color: #351027;
-    padding: 0.4rem 1.2rem;
+    background-color: #F1F5F9;
+    color: #334155;
+    padding: 0.3rem 0.9rem;
     font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    box-shadow: 0 2px 0 0 #351027;
+    font-weight: 600;
+    letter-spacing: 0.01em;
   }
 
   .pill-tag-dark {
-    background-color: #8F1230;
-    color: #FFF8E8;
-    border-color: #351027;
+    background-color: #0F172A;
+    color: #FFFFFF;
+    border: 1px solid #0F172A;
   }
 
   .pill-tag-gold {
-    background-color: #FECB66;
-    color: #351027;
+    background-color: #E0F2FE;
+    color: #0369A1;
+    border: 1px solid #BAE6FD;
   }
 
   .pill-tag-pink {
-    background-color: #FF6F89;
-    color: #FFFFFF;
+    background-color: #CCFBF1;
+    color: #0F766E;
+    border: 1px solid #99F6E4;
   }
 
-  /* ─── Tactile Cards ───────────────────────────────────────────────────── */
+  /* ─── Clean Modern Cards ──────────────────────────────────────────────── */
   .card-tactile {
     background-color: #FFFFFF;
-    border: 2.5px solid #351027;
-    border-radius: 2rem;
-    box-shadow: 0 6px 0 0 #351027;
-    transition: transform 0.25s cubic-bezier(0.19, 1, 0.22, 1), box-shadow 0.25s ease;
+    border: 1px solid #E2E8F0;
+    border-radius: 1.25rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease;
   }
 
   .card-tactile-hover:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 0 0 #351027;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    border-color: #CBD5E1;
   }
 
-  /* ─── Phone Frames ────────────────────────────────────────────────────── */
-  .phone-container {
-    position: relative;
-    border: 3.5px solid #351027;
-    border-radius: 3rem;
-    padding: 0.75rem;
-    box-shadow: 0 12px 0 0 #351027;
-    background: linear-gradient(180deg, #FFA3B5 0%, #F52F4F 100%);
-    transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+  /* ─── General Page Utility Classes ────────────────────────────────────── */
+  .page-container {
+    max-width: 72rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 2rem 1.5rem 4rem 1.5rem;
   }
 
-  .phone-screen-inner {
-    background-color: #FFF8E8;
-    border: 2px solid #351027;
-    border-radius: 2.35rem;
-    padding: 1.2rem;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    overflow: hidden;
+  .page-title {
+    font-size: 1.875rem;
+    font-weight: 800;
+    color: #0F172A;
+    letter-spacing: -0.025em;
+  }
+
+  .page-subtitle {
+    font-size: 0.95rem;
+    color: #64748B;
+    margin-top: 0.35rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .card {
+    background-color: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 1rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+  }
+
+  .prototype-banner {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background-color: #EFF6FF;
+    color: #1D4ED8;
+    border: 1px solid #DBEAFE;
+    border-radius: 9999px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.725rem;
+    font-weight: 600;
+  }
+
+  .table-header {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748B;
+    background-color: #F8FAFC;
+  }
+
+  .table-cell {
+    padding: 0.85rem 1rem;
+    font-size: 0.825rem;
+    color: #334155;
+    border-top: 1px solid #F1F5F9;
+  }
+
+  .badge-slate {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.55rem;
+    border-radius: 9999px;
+    font-size: 0.725rem;
+    font-weight: 600;
+    background-color: #F1F5F9;
+    color: #475569;
+  }
+
+  .badge-green {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.55rem;
+    border-radius: 9999px;
+    font-size: 0.725rem;
+    font-weight: 600;
+    background-color: #ECFDF5;
+    color: #047857;
+    border: 1px solid #A7F3D0;
+  }
+
+  .badge-yellow {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.55rem;
+    border-radius: 9999px;
+    font-size: 0.725rem;
+    font-weight: 600;
+    background-color: #FFFBEB;
+    color: #B45309;
+    border: 1px solid #FDE68A;
+  }
+
+  .badge-red {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.55rem;
+    border-radius: 9999px;
+    font-size: 0.725rem;
+    font-weight: 600;
+    background-color: #FEF2F2;
+    color: #B91C1C;
+    border: 1px solid #FECACA;
   }
 }
 
-/* Custom Scrollbar */
+/* Custom Clean Scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #FFF8E8;
+  background: #F1F5F9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #FECB66;
-  border: 2px solid #351027;
+  background: #CBD5E1;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #F52F4F;
+  background: #94A3B8;
 }

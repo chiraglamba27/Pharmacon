@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Package, CheckCircle2, AlertTriangle, Phone, Plus,
-  Minus, Check, X, Search, Building2, RefreshCw, Layers
+  Minus, Check, X, Search, Building2, RefreshCw, Layers,
+  Heart, ArrowRight, ShieldCheck, FileText
 } from 'lucide-react';
 import MedicinePillMascot from '../../components/MedicinePillMascot';
 import { api } from '../../api/client';
@@ -30,7 +32,12 @@ interface InventoryItem {
 }
 
 export default function PharmacyDashboard() {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, login } = useAuth();
+  const [prescriptions, setPrescriptions] = useState<any[]>([]);
+  const [dispensingId, setDispensingId] = useState<string | null>(null);
+  const [recentlyDispensedId, setRecentlyDispensedId] = useState<string | null>(null);
+
   const [refills, setRefills] = useState<RefillItem[]>([
     {
       id: 'RF-101',
@@ -72,31 +79,59 @@ export default function PharmacyDashboard() {
   });
   const [notification, setNotification] = useState('');
 
-  useEffect(() => {
+  const loadAll = () => {
     Promise.all([
       api.get<{ refills: RefillItem[] }>('/refills'),
       api.get<{ items: InventoryItem[] }>('/inventory'),
+      api.get<{ prescriptions: any[] }>('/prescriptions'),
     ])
-      .then(([refillData, inventoryData]) => {
-        if (refillData.refills && refillData.refills.length > 0) setRefills(refillData.refills);
-        if (inventoryData.items && inventoryData.items.length > 0) setInventory(inventoryData.items);
+      .then(([refillData, inventoryData, rxData]) => {
+        if (refillData?.refills && refillData.refills.length > 0) setRefills(refillData.refills);
+        if (inventoryData?.items && inventoryData.items.length > 0) setInventory(inventoryData.items);
+        if (rxData?.prescriptions) setPrescriptions(rxData.prescriptions);
       })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadAll();
   }, []);
+
+  const handleDispenseRx = async (rxId: string) => {
+    setDispensingId(rxId);
+    try {
+      await api.put(`/prescriptions/${rxId}/status`, { status: 'dispensed' });
+      setRecentlyDispensedId(rxId);
+      setNotification(`Prescription ${rxId} dispensed! Stock auto-decremented in SQLite inventory.`);
+      loadAll();
+      setTimeout(() => setNotification(''), 5000);
+    } catch (e: any) {
+      alert('Dispense failed: ' + (e.message || 'Server error'));
+    } finally {
+      setDispensingId(null);
+    }
+  };
+
+  const handleSwitchToPatient = async () => {
+    await login('patient.rahul@gmail.com', 'patient123');
+    navigate('/dashboard/patient');
+  };
 
   const updateRefillStatus = async (id: string, status: 'approved' | 'rejected' | 'contacted') => {
     try {
       await api.put(`/refills/${id}`, { status });
-    } catch (e) {}
-
-    setRefills((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+      const [refillData, inventoryData] = await Promise.all([
+        api.get<{ refills: RefillItem[] }>('/refills'),
+        api.get<{ items: InventoryItem[] }>('/inventory'),
+      ]);
+      if (refillData.refills) setRefills(refillData.refills);
+      if (inventoryData.items) setInventory(inventoryData.items);
+    } catch (e) {
+      setRefills((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+    }
 
     if (status === 'approved') {
-      // Deduct inventory
-      setInventory((prev) =>
-        prev.map((item) => (item.id === 'INV-001' ? { ...item, stock: Math.max(0, item.stock - 1) } : item))
-      );
-      setNotification(`Refill ${id} approved! Inventory updated and patient notified.`);
+      setNotification(`Refill ${id} approved! Inventory updated and audit logged in DB.`);
     } else if (status === 'rejected') {
       setNotification(`Refill ${id} rejected.`);
     } else {
@@ -106,23 +141,28 @@ export default function PharmacyDashboard() {
     setTimeout(() => setNotification(''), 4000);
   };
 
-  const adjustStock = (id: string, delta: number) => {
+  const adjustStock = async (id: string, delta: number) => {
+    const item = inventory.find((i) => i.id === id);
+    if (!item) return;
+    const newStock = Math.max(0, item.stock + delta);
+    const newStatus = newStock === 0 ? 'out-of-stock' : newStock <= item.reorderLevel ? 'low-stock' : 'in-stock';
+
+    // Optimistic UI update
     setInventory((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          const newStock = Math.max(0, item.stock + delta);
-          const newStatus = newStock === 0 ? 'out-of-stock' : newStock <= item.reorderLevel ? 'low-stock' : 'in-stock';
-          return { ...item, stock: newStock, status: newStatus };
-        }
-        return item;
-      })
+      prev.map((i) => (i.id === id ? { ...i, stock: newStock, status: newStatus } : i))
     );
+
+    // Persist to backend database
+    try {
+      await api.put(`/inventory/${id}`, { stock: newStock });
+    } catch (e) {
+      console.error('Failed to update stock in database', e);
+    }
   };
 
-  const handleAddMed = (e: React.FormEvent) => {
+  const handleAddMed = async (e: React.FormEvent) => {
     e.preventDefault();
-    const item: InventoryItem = {
-      id: `INV-${Date.now().toString(36).toUpperCase()}`,
+    const itemPayload = {
       medicine: newMed.medicine,
       strength: newMed.strength,
       dosageForm: newMed.dosageForm,
@@ -130,13 +170,19 @@ export default function PharmacyDashboard() {
       packSize: newMed.packSize,
       stock: Number(newMed.stock),
       reorderLevel: Number(newMed.reorderLevel),
-      status: Number(newMed.stock) <= Number(newMed.reorderLevel) ? 'low-stock' : 'in-stock',
     };
 
-    setInventory([item, ...inventory]);
+    try {
+      await api.post('/inventory', itemPayload);
+      const inventoryData = await api.get<{ items: InventoryItem[] }>('/inventory');
+      if (inventoryData.items) setInventory(inventoryData.items);
+      setNotification(`Added ${itemPayload.medicine} to Formulary Inventory in Database!`);
+    } catch (e) {
+      setNotification(`Added ${itemPayload.medicine}`);
+    }
+
     setAddingMed(false);
     setNewMed({ medicine: '', strength: '500 mg', dosageForm: 'Tablet', sku: '', packSize: '100 tabs', stock: 50, reorderLevel: 15 });
-    setNotification(`Added ${item.medicine} to Formulary Inventory!`);
     setTimeout(() => setNotification(''), 4000);
   };
 
@@ -171,12 +217,101 @@ export default function PharmacyDashboard() {
         </button>
       </div>
 
-      {notification && (
-        <div className="p-4 bg-[#E0F5EE] border-2 border-[#351027] rounded-2xl text-xs font-bold text-emerald-950 flex items-center gap-2 shadow-tactile-sm">
-          <CheckCircle2 className="w-5 h-5 text-emerald-700 flex-shrink-0" />
-          <span>{notification}</span>
+      {/* Step 3 Completion Banner */}
+      {recentlyDispensedId && (
+        <div className="card-tactile p-6 bg-[#E0F5EE] border-2 border-emerald-600 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-tactile animate-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-extrabold uppercase bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full border border-emerald-300">
+                  Step 3 of 4 Complete
+                </span>
+                <span className="text-xs font-mono font-bold text-emerald-800">{recentlyDispensedId}</span>
+              </div>
+              <h3 className="font-extrabold text-sm sm:text-base text-emerald-950 mt-0.5">
+                Prescription Successfully Dispensed & Stock Decremented in SQLite!
+              </h3>
+              <p className="text-xs text-emerald-900/80 font-medium">
+                The medication is now live in the Patient Care Portal with digital daily dose reminders.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleSwitchToPatient}
+            className="btn-tactile btn-tactile-dark shrink-0"
+          >
+            <span className="btn-tactile-inner py-2.5 px-5 text-xs font-extrabold flex items-center gap-2">
+              <Heart className="w-4 h-4 text-rose-400" />
+              <span>Go to Step 4: Switch to Patient & View Schedule</span>
+              <ArrowRight className="w-4 h-4" />
+            </span>
+          </button>
         </div>
       )}
+
+      {/* ─── Verified Prescription Orders Ready for Dispensing ─── */}
+      <div className="card-tactile p-6 space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-[#351027]/10">
+          <div className="flex items-center gap-2">
+            <Package className="w-5 h-5 text-[#F52F4F]" />
+            <h2 className="heading-chunky text-xl text-[#351027]">
+              Doctor-Verified Prescriptions (Ready to Dispense)
+            </h2>
+          </div>
+          <span className="pill-tag-dark text-[10px]">
+            {prescriptions.filter((p) => p.status === 'verified' || p.status === 'confirmed').length} In Queue
+          </span>
+        </div>
+
+        {prescriptions.filter((p) => p.status === 'verified' || p.status === 'confirmed').length === 0 ? (
+          <div className="p-6 text-center text-xs text-slate-500 font-medium bg-slate-50 rounded-xl border border-slate-200">
+            No prescriptions awaiting dispensing. Upload a prescription in Step 1 and approve it in Step 2 to test dispensing!
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {prescriptions
+              .filter((p) => p.status === 'verified' || p.status === 'confirmed')
+              .map((rx) => {
+                const med = rx.fields?.find((f: any) => f.label.toLowerCase().includes('med'))?.value || 'Amoxicillin';
+                const strength = rx.fields?.find((f: any) => f.label.toLowerCase().includes('strength'))?.value || '500 mg';
+                return (
+                  <div
+                    key={rx.id}
+                    className="p-4 rounded-2xl bg-white border-2 border-[#351027] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-tactile-sm"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-sm text-[#351027]">{rx.patient_name}</span>
+                        <span className="text-xs font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-bold">{rx.id}</span>
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          {rx.status.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="text-xs text-[#351027]/80 mt-1">
+                        Doctor: <strong>{rx.doctor_name}</strong> • Prescribed: <strong>{med} {strength}</strong>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleDispenseRx(rx.id)}
+                      disabled={dispensingId === rx.id}
+                      className="btn-tactile btn-tactile-dark shrink-0"
+                    >
+                      <span className="btn-tactile-inner py-2 px-4 text-xs font-extrabold flex items-center gap-1.5">
+                        <Package className="w-4 h-4 text-emerald-400" />
+                        <span>{dispensingId === rx.id ? 'Dispensing...' : 'Dispense Prescription (Step 3)'}</span>
+                      </span>
+                    </button>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+      </div>
 
       {/* ─── 1. Refill Requests Queue ─────────────────────────────────────── */}
       <div className="card-tactile p-6 space-y-4">

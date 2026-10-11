@@ -4,7 +4,17 @@ import { api } from '../api/client';
 
 export default function InventoryPage() {
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
-  useEffect(() => { api.get<{ items: any[] }>('/inventory').then(data => setInventoryItems(data.items)).catch(() => {}); }, []);
+
+  const fetchInventory = () => {
+    api.get<{ items: any[] }>('/inventory')
+      .then(data => setInventoryItems(data.items))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
   const statusBadge = (status: string) => {
     switch (status) {
       case 'in-stock': return 'badge-green';
@@ -19,20 +29,25 @@ export default function InventoryPage() {
       case 'in-stock': return 'In Stock';
       case 'low-stock': return 'Low Stock';
       case 'out-of-stock': return 'Out of Stock';
-      default: return status;
+      default: return status || 'In Stock';
     }
   };
 
   return (
     <div className="page-container">
       <div className="flex items-center justify-between flex-wrap gap-3 mb-1">
-        <h1 className="page-title">Formulary / Inventory</h1>
-        <div className="prototype-banner">
-          <Info className="w-3.5 h-3.5" />
-          <span>Fictional Demo Data</span>
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="badge-teal">Apollo Central Formulary</span>
+            <span className="badge-green">SQLite Live DB</span>
+          </div>
+          <h1 className="page-title">Formulary / Inventory</h1>
         </div>
+        <button onClick={fetchInventory} className="btn-secondary">
+          Refresh Stock
+        </button>
       </div>
-      <p className="page-subtitle">Demonstration inventory with formulary matching capabilities.</p>
+      <p className="page-subtitle">Real-time medication formulary and stock counters linked directly to SQLite database.</p>
 
       <div className="max-w-5xl space-y-6">
         {/* Table */}

@@ -4,7 +4,17 @@ import { api } from '../api/client';
 
 export default function AuditPage() {
   const [auditEvents, setAuditEvents] = useState<any[]>([]);
-  useEffect(() => { api.get<{ events: any[] }>('/audit').then(data => setAuditEvents(data.events)).catch(() => {}); }, []);
+
+  const fetchAudit = () => {
+    api.get<{ events: any[] }>('/audit')
+      .then(data => setAuditEvents(data.events))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchAudit();
+  }, []);
+
   const statusIcon = (status: string) => {
     switch (status) {
       case 'success': return 'bg-emerald-100 text-emerald-600';
@@ -17,13 +27,18 @@ export default function AuditPage() {
   return (
     <div className="page-container">
       <div className="flex items-center justify-between flex-wrap gap-3 mb-1">
-        <h1 className="page-title">Audit Trail</h1>
-        <div className="prototype-banner">
-          <Info className="w-3.5 h-3.5" />
-          <span>Prototype Data</span>
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="badge-teal">Security & Compliance</span>
+            <span className="badge-green">SQLite Live DB</span>
+          </div>
+          <h1 className="page-title">Audit Trail</h1>
         </div>
+        <button onClick={fetchAudit} className="btn-secondary">
+          Refresh Audit Log
+        </button>
       </div>
-      <p className="page-subtitle">Complete audit log of prescription workflow events.</p>
+      <p className="page-subtitle">Real-time immutable log of prescription workflows, authentication events, and inventory changes.</p>
 
       <div className="max-w-5xl">
         <div className="card overflow-hidden animate-in">

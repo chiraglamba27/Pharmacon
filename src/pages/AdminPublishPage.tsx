@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Upload, CheckCircle, AlertCircle, Loader2,
-  FileText, ArrowRight, ShieldCheck, Sparkles, FolderUp, Lock
+  FileText, ArrowRight, ShieldCheck, Sparkles, FolderUp, Lock, Database
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import FileUploader from '../components/FileUploader';
@@ -92,7 +92,30 @@ export default function AdminPublishPage() {
         </p>
       </div>
 
-      {/* Success Notification */}
+      {/* Admin Diagnostics & DB Inspector Banner */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-slate-900 text-white rounded-2xl shadow-sm border border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+            <Database className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Admin Diagnostics</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">server/pharmacon.db</span>
+            </div>
+            <p className="text-xs text-slate-300">
+              Live SQLite database tables inspector is secured and accessible only to administrators.
+            </p>
+          </div>
+        </div>
+        <Link
+          to="/db"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-colors shrink-0 shadow-sm"
+        >
+          <span>Open Database Inspector</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
+      </div>
       {publishedResult && (
         <div className="p-5 rounded-3xl bg-[#E0F5EE] border-2 border-[#351027] text-emerald-950 space-y-2 shadow-tactile">
           <div className="flex items-center gap-2 font-display font-extrabold text-sm text-emerald-900">

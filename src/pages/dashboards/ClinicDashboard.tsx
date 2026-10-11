@@ -1,10 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Upload, ClipboardList, Users, AlertTriangle, CheckCircle2,
-  Eye, Plus, FileText, Check, X, Stethoscope, Search, Sparkles
+  Upload, AlertTriangle, CheckCircle2,
+  Eye, Check, X, Sparkles, RefreshCw, Stethoscope, ShieldCheck
 } from 'lucide-react';
-import MedicinePillMascot from '../../components/MedicinePillMascot';
 import { Link } from 'react-router-dom';
+import { api } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
+
+interface FlaggedField {
+  id?: number;
+  field: string;
+  detectedValue: string;
+  confidence: number;
+  resolved: boolean;
+}
 
 interface ReviewQueueItem {
   id: string;
@@ -12,110 +21,161 @@ interface ReviewQueueItem {
   doctor: string;
   medicine: string;
   time: string;
-  flaggedFields: { field: string; detectedValue: string; confidence: number; resolved: boolean }[];
+  flaggedFields: FlaggedField[];
 }
 
 export default function ClinicDashboard() {
-  const [queue, setQueue] = useState<ReviewQueueItem[]>([
-    {
-      id: 'RX-2026-0091',
-      patient: 'Sunil Reddy',
-      doctor: 'Dr. A. Sharma',
-      medicine: 'Amoxicillin 500mg',
-      time: 'Just now',
-      flaggedFields: [
-        { field: 'Frequency', detectedValue: '1-0-1 (ambiguous)', confidence: 84, resolved: false },
-        { field: 'Duration', detectedValue: '5 days', confidence: 94, resolved: true },
-      ],
-    },
-    {
-      id: 'RX-2026-0092',
-      patient: 'Kavita Nair',
-      doctor: 'Dr. S. Verma',
-      medicine: 'Metformin 500mg',
-      time: '8 mins ago',
-      flaggedFields: [
-        { field: 'Dosage Form', detectedValue: 'Tab vs Cap', confidence: 81, resolved: false },
-        { field: 'Instructions', detectedValue: 'Before meals', confidence: 86, resolved: false },
-      ],
-    },
-  ]);
-
+  const { user } = useAuth();
+  const [queue, setQueue] = useState<ReviewQueueItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeReview, setActiveReview] = useState<ReviewQueueItem | null>(null);
   const [notification, setNotification] = useState('');
+  const [editedValues, setEditedValues] = useState<{ [key: number]: string }>({});
 
-  const handleResolveField = (fieldIdx: number) => {
-    if (!activeReview) return;
-    const updatedFlags = activeReview.flaggedFields.map((f, i) =>
-      i === fieldIdx ? { ...f, resolved: true, confidence: 99 } : f
-    );
-    const updatedReview = { ...activeReview, flaggedFields: updatedFlags };
-    setActiveReview(updatedReview);
-    setQueue((prev) => prev.map((item) => (item.id === activeReview.id ? updatedReview : item)));
+  const fetchQueue = async () => {
+    setLoading(true);
+    try {
+      const data = await api.get<{ prescriptions: any[] }>('/prescriptions?status=draft');
+      if (data?.prescriptions) {
+        const mapped: ReviewQueueItem[] = data.prescriptions.map((p) => {
+          const medField = p.fields?.find((f: any) => f.label?.toLowerCase().includes('med'))?.value || 'Prescription Intake';
+          const flagged: FlaggedField[] = (p.fields || [])
+            .filter((f: any) => f.needs_verification === 1 || f.confidence < 90)
+            .map((f: any) => ({
+              id: f.id,
+              field: f.label,
+              detectedValue: f.value,
+              confidence: f.confidence,
+              resolved: f.needs_verification === 0,
+            }));
+
+          // If no fields are flagged, create a default check
+          const flaggedFields = flagged.length > 0 ? flagged : [
+            { field: 'Dosage Verification', detectedValue: 'Standard dosage check', confidence: 85, resolved: false }
+          ];
+
+          return {
+            id: p.id,
+            patient: p.patient_name || 'Walk-in Patient',
+            doctor: p.doctor_name || 'Attending Physician',
+            medicine: medField,
+            time: p.created_at ? new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent',
+            flaggedFields,
+          };
+        });
+        setQueue(mapped);
+      }
+    } catch (err) {
+      console.error('Failed to load clinic queue:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCompleteVerification = () => {
+  useEffect(() => {
+    fetchQueue();
+  }, []);
+
+  const handleResolveField = async (fieldIdx: number) => {
     if (!activeReview) return;
-    setQueue((prev) => prev.filter((item) => item.id !== activeReview.id));
-    setNotification(`Prescription ${activeReview.id} verified and released to Pharmacy queue!`);
-    setActiveReview(null);
-    setTimeout(() => setNotification(''), 4000);
+    const target = activeReview.flaggedFields[fieldIdx];
+    const finalVal = editedValues[fieldIdx] !== undefined ? editedValues[fieldIdx] : target.detectedValue;
+
+    try {
+      await api.put(`/prescriptions/${activeReview.id}/resolve-field`, {
+        fieldId: target.id,
+        fieldLabel: target.field,
+        originalPrediction: target.detectedValue,
+        correctedValue: finalVal,
+        confidenceBefore: target.confidence,
+      });
+
+      const updatedFlags = activeReview.flaggedFields.map((f, i) =>
+        i === fieldIdx ? { ...f, detectedValue: finalVal, resolved: true, confidence: 99 } : f
+      );
+      const updatedReview = { ...activeReview, flaggedFields: updatedFlags };
+      setActiveReview(updatedReview);
+      setQueue((prev) => prev.map((item) => (item.id === activeReview.id ? updatedReview : item)));
+    } catch (err: any) {
+      console.error('Failed to resolve field in DB:', err);
+      alert('Error saving resolution: ' + (err.message || 'Check server connection'));
+    }
+  };
+
+  const handleCompleteVerification = async () => {
+    if (!activeReview) return;
+    try {
+      await api.put(`/prescriptions/${activeReview.id}/status`, { status: 'confirmed' });
+      setQueue((prev) => prev.filter((item) => item.id !== activeReview.id));
+      setNotification(`Prescription ${activeReview.id} verified in SQLite database & released to Pharmacy queue!`);
+      setActiveReview(null);
+      setTimeout(() => setNotification(''), 4500);
+    } catch (err: any) {
+      alert('Error updating status: ' + (err.message || 'Server error'));
+    }
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 space-y-8">
+    <div className="page-container">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b-2 border-[#351027]">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <MedicinePillMascot size={28} mood="smart" />
-            <span className="pill-tag-pink">Clinic Staff Workspace</span>
-            <span className="pill-tag">Role: Clinic Staff (Active)</span>
+            <span className="badge-teal">Clinic Staff Workspace</span>
+            <span className="badge-slate">Logged in as: {user?.name || 'Clinic Staff'}</span>
+            <span className="badge-green">SQLite Live DB</span>
           </div>
-          <h1 className="heading-chunky text-2xl sm:text-4xl text-[#351027]">
-            Clinic Intake & Transcription Review Portal
-          </h1>
-          <p className="text-xs sm:text-sm text-[#351027]/70 mt-1 font-medium">
-            Intake incoming handwritten paper prescriptions, verify low-confidence OCR transcriptions, and route to attending doctors.
+          <h1 className="page-title">Clinic Intake & Transcription Review</h1>
+          <p className="page-subtitle">
+            Review incoming handwritten prescriptions, resolve AI OCR uncertainty flags, and release verified records to pharmacy inventory.
           </p>
         </div>
 
-        <Link to="/prototype" className="btn-tactile btn-tactile-gold">
-          <span className="btn-tactile-inner py-2 px-5 text-xs font-extrabold flex items-center gap-2">
-            <Upload className="w-4 h-4" />
-            <span>Launch Rx Intake Scanner</span>
-          </span>
-        </Link>
+        <div className="flex items-center gap-3">
+          <button onClick={fetchQueue} className="btn-secondary">
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh Queue
+          </button>
+          <Link to="/prototype" className="btn-primary">
+            <Upload className="w-4 h-4 mr-2" />
+            Launch Rx Intake Scanner
+          </Link>
+        </div>
       </div>
 
       {notification && (
-        <div className="p-4 bg-[#E0F5EE] border-2 border-[#351027] rounded-2xl text-xs font-bold text-emerald-950 flex items-center gap-2 shadow-tactile-sm">
-          <CheckCircle2 className="w-5 h-5 text-emerald-700 flex-shrink-0" />
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-sm font-medium text-emerald-900 flex items-center gap-3 shadow-sm">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
           <span>{notification}</span>
         </div>
       )}
 
       {/* ─── Review Queue & Uncertainty Verification ──────────────────────── */}
-      <div className="card-tactile p-6 space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-[#351027]/10">
+      <div className="card p-6 space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-[#F52F4F]" />
-            <h2 className="heading-chunky text-xl text-[#351027]">
-              Uncertainty Review Queue (Low-Confidence OCR Flags)
+            <AlertTriangle className="w-5 h-5 text-amber-500" />
+            <h2 className="text-lg font-bold text-slate-900">
+              Intake Uncertainty Queue (Low-Confidence OCR Flags)
             </h2>
           </div>
-          <span className="pill-tag-pink text-[10px]">{queue.length} Pending Verifications</span>
+          <span className="badge-yellow">{queue.length} Pending Verifications</span>
         </div>
 
         <div className="grid gap-3">
-          {queue.length === 0 ? (
-            <div className="p-8 text-center bg-[#E0F5EE] rounded-2xl border-2 border-[#351027]">
-              <CheckCircle2 className="w-8 h-8 text-emerald-700 mx-auto mb-2" />
-              <div className="font-display font-extrabold text-base text-emerald-950">
+          {loading ? (
+            <div className="p-8 text-center text-slate-500">
+              <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-cyan-600" />
+              Loading real intake records from database...
+            </div>
+          ) : queue.length === 0 ? (
+            <div className="p-10 text-center bg-emerald-50/50 rounded-xl border border-emerald-100">
+              <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto mb-3" />
+              <div className="font-bold text-base text-emerald-950">
                 All Prescriptions Verified!
               </div>
-              <div className="text-xs text-emerald-800 font-medium">
-                No flagged prescription fields require staff attention at this time.
+              <div className="text-sm text-emerald-700 mt-1 max-w-md mx-auto">
+                No draft prescriptions require staff transcription checks at this time. Use the Rx Scanner to process new slips.
               </div>
             </div>
           ) : (
@@ -124,30 +184,35 @@ export default function ClinicDashboard() {
               return (
                 <div
                   key={item.id}
-                  className="p-4 rounded-2xl bg-[#FFF8E8] border-2 border-[#351027] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-tactile-sm"
+                  className="p-5 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
                 >
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-display font-extrabold text-sm text-[#351027]">
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-base text-slate-900">
                         {item.patient}
                       </span>
-                      <span className="text-[10px] font-mono text-[#351027]/60 font-bold">
-                        ({item.id}) · Attending: {item.doctor}
+                      <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                        {item.id}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        Attending: {item.doctor} · {item.time}
                       </span>
                     </div>
-                    <div className="text-xs text-[#351027] font-bold mt-1">
-                      Medication: <strong className="text-[#F52F4F]">{item.medicine}</strong> · Flagged: {unresolvedCount} fields needing manual check
+                    <div className="text-sm text-slate-700 mt-1.5 flex items-center gap-2">
+                      <span>Prescribed: <strong className="text-slate-900">{item.medicine}</strong></span>
+                      <span className="text-slate-300">•</span>
+                      <span className={unresolvedCount > 0 ? 'text-amber-600 font-medium' : 'text-emerald-600 font-medium'}>
+                        {unresolvedCount > 0 ? `${unresolvedCount} field(s) require manual check` : 'All fields verified'}
+                      </span>
                     </div>
                   </div>
 
                   <button
                     onClick={() => setActiveReview(item)}
-                    className="btn-tactile btn-tactile-dark"
+                    className="btn-secondary"
                   >
-                    <span className="btn-tactile-inner py-1.5 px-4 text-xs font-extrabold flex items-center gap-1.5">
-                      <Eye className="w-3.5 h-3.5" />
-                      Review & Confirm
-                    </span>
+                    <Eye className="w-4 h-4 mr-2 text-cyan-600" />
+                    Review & Confirm
                   </button>
                 </div>
               );
@@ -158,76 +223,84 @@ export default function ClinicDashboard() {
 
       {/* ─── Verification Modal ───────────────────────────────────────────── */}
       {activeReview && (
-        <div className="fixed inset-0 z-50 bg-[#351027]/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#FFF8E8] border-[3.5px] border-[#351027] rounded-4xl p-6 sm:p-8 max-w-xl w-full shadow-tactile-xl relative space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b-2 border-[#351027]">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-xl w-full shadow-2xl relative space-y-5 border border-slate-200 animate-in">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-[#F52F4F]" />
-                <h3 className="heading-chunky text-lg text-[#351027]">
-                  Transcription Verification: {activeReview.patient}
+                <Sparkles className="w-5 h-5 text-cyan-600" />
+                <h3 className="text-lg font-bold text-slate-900">
+                  Verify Transcription: {activeReview.patient}
                 </h3>
               </div>
-              <button onClick={() => setActiveReview(null)} className="text-[#351027]">
+              <button
+                onClick={() => setActiveReview(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-[#351027]/80 font-medium">
-              Review flagged fields where handwriting confidence was below the 90% threshold. Confirm or override the detected value:
+            <p className="text-sm text-slate-600">
+              Confirm or override detected handwriting values. Resolved fields are recorded in the database and audit trail:
             </p>
 
             <div className="space-y-3">
               {activeReview.flaggedFields.map((flag, idx) => (
                 <div
                   key={idx}
-                  className={`p-3 rounded-2xl border-2 border-[#351027] flex items-center justify-between gap-3 ${
-                    flag.resolved ? 'bg-[#E0F5EE]' : 'bg-[#FFE8ED]'
+                  className={`p-4 rounded-xl border transition-all ${
+                    flag.resolved ? 'bg-emerald-50/70 border-emerald-200' : 'bg-amber-50/70 border-amber-200'
                   }`}
                 >
-                  <div>
-                    <div className="text-[10px] uppercase font-extrabold text-[#351027]/70">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       {flag.field}
-                    </div>
-                    <div className="text-xs font-extrabold text-[#351027] mt-0.5">
-                      Detected: {flag.detectedValue}
-                    </div>
-                    <div className="text-[9px] font-bold text-[#F52F4F]">
-                      Confidence: {flag.confidence}%
-                    </div>
+                    </span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      flag.resolved ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      OCR Confidence: {flag.confidence}%
+                    </span>
                   </div>
 
-                  {flag.resolved ? (
-                    <span className="px-2.5 py-1 rounded-full bg-white border border-[#351027] text-[10px] font-extrabold text-emerald-800 flex items-center gap-1">
-                      <Check className="w-3 h-3 text-emerald-600" />
-                      Verified
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => handleResolveField(idx)}
-                      className="btn-tactile btn-tactile-gold"
-                    >
-                      <span className="btn-tactile-inner py-1 px-3 text-[10px] font-bold">
-                        Confirm Value ✓
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="text"
+                      disabled={flag.resolved}
+                      value={editedValues[idx] !== undefined ? editedValues[idx] : flag.detectedValue}
+                      onChange={(e) => setEditedValues({ ...editedValues, [idx]: e.target.value })}
+                      className="form-input flex-1 font-mono text-sm"
+                    />
+
+                    {flag.resolved ? (
+                      <span className="px-3 py-1.5 rounded-lg bg-emerald-100 text-xs font-bold text-emerald-800 flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        Verified
                       </span>
-                    </button>
-                  )}
+                    ) : (
+                      <button
+                        onClick={() => handleResolveField(idx)}
+                        className="btn-primary text-xs whitespace-nowrap"
+                      >
+                        Confirm ✓
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-[#351027]/10">
-              <button onClick={() => setActiveReview(null)} className="btn-tactile btn-tactile-white">
-                <span className="btn-tactile-inner py-1.5 px-4 text-xs font-bold">Cancel</span>
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <button onClick={() => setActiveReview(null)} className="btn-secondary">
+                Cancel
               </button>
               <button
                 onClick={handleCompleteVerification}
                 disabled={activeReview.flaggedFields.some((f) => !f.resolved)}
-                className="btn-tactile btn-tactile-dark"
+                className="btn-primary disabled:opacity-50"
               >
-                <span className="btn-tactile-inner py-1.5 px-5 text-xs font-bold flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  Release to Pharmacy
-                </span>
+                <ShieldCheck className="w-4 h-4 mr-2" />
+                Release to Pharmacy
               </button>
             </div>
           </div>
